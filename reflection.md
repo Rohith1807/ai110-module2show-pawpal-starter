@@ -5,11 +5,13 @@
 **a. Initial design**
 
 - Briefly describe your initial UML design.
+
 1. **Add a Pet and its core tasks** (walks, feeding, meds, grooming) with duaration and priority.
 2. **Set daily constraints** (how much time the owner has available today)
 3. **Generate and view today's plan** with reasoning for why tasks were included or skipped.
 
 - What classes did you include, and what responsibilities did you assign to each?
+
 I chose 4 classes: **Owner, Pet, Task, and Scheduler**
 **Owner** holds the user's info and available time for the day.
 **Pet** hold the identity info and its list of care tasks.
