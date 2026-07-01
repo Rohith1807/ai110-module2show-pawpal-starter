@@ -64,9 +64,32 @@ Skipped (not enough time today):
 
 ## 🧪 Testing PawPal+
 
+## 🧪 Testing PawPal+
+
+Run the full test suite:
+
+    python -m pytest
+
+These tests cover:
+- **Sorting correctness** — tasks are returned in chronological order by scheduled time, with unscheduled tasks placed last
+- **Filtering** — by pet name and by completion status
+- **Recurrence logic** — completing a daily task automatically creates the next day's occurrence, one-off tasks do not
+- **Conflict detection** — two tasks scheduled at the same time are flagged with a warning, without crashing the program
+- **Edge case** — a pet with zero tasks doesn't break sorting or filtering
+
 ```bash
-# Run the full test suite:
-pytest
+========================================================== test session starts ===========================================================
+platform win32 -- Python 3.14.5, pytest-9.0.3, pluggy-1.6.0
+rootdir: C:\Users\rohit\OneDrive - University of St. Thomas\codepath\ai110-module2show-pawpal-starter
+plugins: anyio-4.13.0
+collected 10 items                                                                                                                        
+
+tests\test_pawpal.py ..........                                                                                                     [100%]
+
+=========================================================== 10 passed in 0.06s ===========================================================
+```
+
+Confidence Level - ★★★★
 
 # Run with coverage:
 pytest --cov
