@@ -27,6 +27,33 @@ def print_schedule(owner, plan, skipped):
     print("=" * 50)
 
 
+def print_sorted_by_time(scheduler, tasks):
+    print("\n--- Tasks sorted by time ---")
+    for pet, task in scheduler.sort_by_time(tasks):
+        time_label = task.scheduled_time or "unscheduled"
+        print(f"  {time_label} — {pet.name}: {task.name}")
+
+
+def print_filtered(scheduler, tasks, pet_name):
+    print(f"\n--- Tasks for {pet_name} only ---")
+    for pet, task in scheduler.filter_tasks(tasks, pet_name=pet_name):
+        print(f"  {pet.name}: {task.name} ({task.scheduled_time})")
+
+    print("\n--- Incomplete tasks only ---")
+    for pet, task in scheduler.filter_tasks(tasks, completed=False):
+        print(f"  {pet.name}: {task.name}")
+
+
+def print_conflicts(scheduler, tasks):
+    print("\n--- Conflict check ---")
+    warnings = scheduler.detect_conflicts(tasks)
+    if warnings:
+        for w in warnings:
+            print(f"  WARNING: {w}")
+    else:
+        print("  No conflicts detected.")
+
+
 def main():
     owner = Owner(name="Rohith")
     owner.set_available_minutes(60)
@@ -37,15 +64,40 @@ def main():
     owner.add_pet(dog)
     owner.add_pet(cat)
 
-    dog.add_task(Task(name="Morning walk", category="walk", duration_minutes=30, priority="high"))
-    dog.add_task(Task(name="Feeding", category="feed", duration_minutes=10, priority="high"))
-    cat.add_task(Task(name="Litter box cleaning", category="grooming", duration_minutes=15, priority="medium"))
-    cat.add_task(Task(name="Playtime", category="enrichment", duration_minutes=20, priority="low"))
+    # Added out of order on purpose to verify sorting works
+    dog.add_task(Task(
+        name="Feeding", category="feed", duration_minutes=10,
+        priority="high", scheduled_time="18:00", frequency="daily",
+    ))
+    dog.add_task(Task(
+        name="Morning walk", category="walk", duration_minutes=30,
+        priority="high", scheduled_time="08:00",
+    ))
+    cat.add_task(Task(
+        name="Litter box cleaning", category="grooming", duration_minutes=15,
+        priority="medium", scheduled_time="09:00",
+    ))
+    cat.add_task(Task(
+        name="Playtime", category="enrichment", duration_minutes=20,
+        priority="low", scheduled_time="08:00",  # same time as the walk, on purpose
+    ))
 
     scheduler = Scheduler(owner)
-    plan, skipped = scheduler.generate_plan()
+    all_tasks = owner.get_all_tasks()
 
+    print_sorted_by_time(scheduler, all_tasks)
+    print_filtered(scheduler, all_tasks, pet_name="Biscuit")
+    print_conflicts(scheduler, all_tasks)
+
+    plan, skipped = scheduler.generate_plan()
     print_schedule(owner, plan, skipped)
+
+    # Demonstrate recurring task automation
+    print("\n--- Completing the recurring feeding task ---")
+    fed_task = dog.tasks[0]
+    new_task = dog.complete_task(fed_task.id)
+    if new_task:
+        print(f"  Next occurrence created: due {new_task.due_date}, id {new_task.id}")
 
 
 if __name__ == "__main__":

@@ -6,28 +6,28 @@
 
 - Briefly describe your initial UML design.
 
-1. **Add a Pet and its core tasks** (walks, feeding, meds, grooming) with duaration and priority.
-2. **Set daily constraints** (how much time the owner has available today)
-3. **Generate and view today's plan** with reasoning for why tasks were included or skipped.
+    1. **Add a Pet and its core tasks** (walks, feeding, meds, grooming) with duaration and priority.
+    2. **Set daily constraints** (how much time the owner has available today)
+    3. **Generate and view today's plan** with reasoning for why tasks were included or skipped.
 
 - What classes did you include, and what responsibilities did you assign to each?
 
-I chose 4 classes: **Owner, Pet, Task, and Scheduler**
-**Owner** holds the user's info and available time for the day.
-**Pet** hold the identity info and its list of care tasks.
-**Task** represents a single care item with duration and priority so it can be scheduled.
-**Scheduler** is sepearte from the pet because scheduling logic is a behaviour, not a property of the pet itself, and keeping it seperate makes it easier to test and change immediately.
+    I chose 4 classes: **Owner, Pet, Task, and Scheduler**
+    **Owner** holds the user's info and available time for the day.
+    **Pet** hold the identity info and its list of care tasks.
+    **Task** represents a single care item with duration and priority so it can be scheduled.
+    **Scheduler** is sepearte from the pet because scheduling logic is a behaviour, not a property of the pet itself, and keeping it seperate makes it easier to test and change immediately.
 
 **b. Design changes**
 
 - Did your design change during implementation?
 - If yes, describe at least one change and why you made it.
 
-After reviewing the skeleton with AI feedback, I made three changes. 
-First, I added an owner back-reference on Pet so scheduling logic can access owner-level constraints without needing to pass the owner separately. 
-Second, I replaced name-based task removal with a unique id field on Task, since two tasks could easily share a name (e.g. two "Walk" entries for morning and evening). 
-Third, I changed Scheduler to operate on the whole Owner instead of a single Pet. 
-My original design didn't account for owners with multiple pets competing for the same block of time, which is actually the more realistic and interesting scheduling problem. I also updated filter_by_time to return both scheduled and skipped tasks explicitly, instead of silently dropping tasks that don't fit, so the app can later show the user what got cut and why.
+    After reviewing the skeleton with AI feedback, I made three changes. 
+    First, I added an owner back-reference on Pet so scheduling logic can access owner-level constraints without needing to pass the owner separately. 
+    Second, I replaced name-based task removal with a unique id field on Task, since two tasks could easily share a name (e.g. two "Walk" entries for morning and evening). 
+    Third, I changed Scheduler to operate on the whole Owner instead of a single Pet. 
+    My original design didn't account for owners with multiple pets competing for the same block of time, which is actually the more realistic and interesting scheduling problem. I also updated filter_by_time to return both scheduled and skipped tasks explicitly, instead of silently dropping tasks that don't fit, so the app can later show the user what got cut and why.
 
 ---
 
@@ -42,6 +42,8 @@ My original design didn't account for owners with multiple pets competing for th
 
 - Describe one tradeoff your scheduler makes.
 - Why is that tradeoff reasonable for this scenario?
+
+    My conflict detection only checks for exact matches on scheduled_time, not overlapping durations. A 30-minute task starting at 08:00 and a 20-minute task starting at 08:15 actually overlap in real life, but my scheduler won't catch that since neither task's start time equals the other's. I chose this because true overlap detection means converting every time into a start/end range and checking interval overlap, which is meaningfully more code for a first pass. Exact-match detection catches the most obvious case (two tasks scheduled for literally the same time) and keeps the logic easy to read, at the cost of missing partial overlaps.
 
 ---
 

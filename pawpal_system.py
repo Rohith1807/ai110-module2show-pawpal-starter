@@ -1,5 +1,6 @@
 from dataclasses import dataclass, field
 from typing import List, Optional, Tuple
+from datetime import date, timedelta
 import uuid
 
 
@@ -12,8 +13,11 @@ class Task:
     category: str
     duration_minutes: int
     priority: str
+    scheduled_time: Optional[str] = None  # "HH:MM" 24-hour format
+    frequency: Optional[str] = None  # "daily", "weekly", or None for one-off
     recurring: bool = False
     completed: bool = False
+    due_date: date = field(default_factory=date.today)
     id: str = field(default_factory=lambda: uuid.uuid4().hex[:8])
 
     def mark_complete(self):
@@ -24,6 +28,28 @@ class Task:
         """Resets a recurring task back to incomplete for the next day."""
         if self.recurring:
             self.completed = False
+
+    def next_occurrence(self) -> Optional["Task"]:
+        """Returns a new Task instance for the next occurrence if this task
+        has a frequency set, or None for one-off tasks."""
+        if self.frequency == "daily":
+            delta = timedelta(days=1)
+        elif self.frequency == "weekly":
+            delta = timedelta(weeks=1)
+        else:
+            return None
+
+        return Task(
+            name=self.name,
+            category=self.category,
+            duration_minutes=self.duration_minutes,
+            priority=self.priority,
+            scheduled_time=self.scheduled_time,
+            frequency=self.frequency,
+            recurring=self.recurring,
+            completed=False,
+            due_date=self.due_date + delta,
+        )
 
 
 @dataclass
@@ -45,6 +71,19 @@ class Pet:
     def get_tasks(self) -> List[Task]:
         """Returns this pet's current list of tasks."""
         return self.tasks
+
+    def complete_task(self, task_id: str) -> Optional[Task]:
+        """Marks a task complete and, if it recurs, adds its next occurrence.
+        Returns the newly created task, or None if there isn't one."""
+        task = next((t for t in self.tasks if t.id == task_id), None)
+        if task is None:
+            return None
+
+        task.mark_complete()
+        next_task = task.next_occurrence()
+        if next_task:
+            self.add_task(next_task)
+        return next_task
 
 
 @dataclass
@@ -93,6 +132,31 @@ class Scheduler:
             key=lambda pt: (PRIORITY_ORDER.get(pt[1].priority, 99), -pt[1].duration_minutes),
         )
 
+    def sort_by_time(
+        self, tasks: List[Tuple[Pet, Task]]
+    ) -> List[Tuple[Pet, Task]]:
+        """Sorts tasks chronologically by scheduled_time (HH:MM). Tasks with
+        no scheduled time are placed at the end."""
+        return sorted(
+            tasks,
+            key=lambda pt: pt[1].scheduled_time or "23:59",
+        )
+
+    def filter_tasks(
+        self,
+        tasks: List[Tuple[Pet, Task]],
+        pet_name: Optional[str] = None,
+        completed: Optional[bool] = None,
+    ) -> List[Tuple[Pet, Task]]:
+        """Filters tasks by pet name and/or completion status. Either filter
+        is skipped if left as None."""
+        result = tasks
+        if pet_name is not None:
+            result = [(pet, task) for pet, task in result if pet.name == pet_name]
+        if completed is not None:
+            result = [(pet, task) for pet, task in result if task.completed == completed]
+        return result
+
     def filter_by_time(
         self, tasks: List[Tuple[Pet, Task]]
     ) -> Tuple[List[Tuple[Pet, Task]], List[Tuple[Pet, Task]]]:
@@ -109,6 +173,24 @@ class Scheduler:
                 skipped.append((pet, task))
 
         return scheduled, skipped
+
+    def detect_conflicts(self, tasks: List[Tuple[Pet, Task]]) -> List[str]:
+        """Lightweight conflict check: flags tasks that share the same
+        scheduled_time, since the owner can't physically do two things at
+        once. Returns a list of human-readable warning strings, never raises."""
+        warnings = []
+        by_time = {}
+        for pet, task in tasks:
+            if task.scheduled_time is None:
+                continue
+            by_time.setdefault(task.scheduled_time, []).append((pet, task))
+
+        for time_slot, group in by_time.items():
+            if len(group) > 1:
+                names = ", ".join(f"{pet.name}: {task.name}" for pet, task in group)
+                warnings.append(f"Conflict at {time_slot} — {names}")
+
+        return warnings
 
     def generate_plan(self) -> Tuple[List[Tuple[Pet, Task]], List[Tuple[Pet, Task]]]:
         """Runs collect, sort, then filter in that fixed order to build today's plan."""
