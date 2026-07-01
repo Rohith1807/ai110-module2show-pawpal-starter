@@ -1,41 +1,41 @@
 classDiagram
-
-class Owner {
-    +String name
-    +List~Pet~ pets
+class Owner{
+    +string name
     +int available_minutes
+    +List~Pet~ pets
     +add_pet(pet)
     +set_available_minutes(minutes)
 }
-
-class Pet {
-    +String name
-    +String species
-    +String breed
+class Pet{
+    +string name
+    +string species
+    +string breed
     +List~Task~ tasks
+    +Owner owner
     +add_task(task)
-    +remove_task(task)
+    +remove_task(task_id)
     +get_tasks()
 }
-
-class Task {
-    +String name
-    +String category
+class Task{
+    +string id
+    +string name
+    +string category
     +int duration_minutes
-    +String priority
+    +string priority
     +bool recurring
     +bool completed
     +mark_complete()
+    +reset()
 }
-
-class Scheduler {
-    +Pet pet
-    +int available_minutes
+class Scheduler{
+    +Owner owner
+    +collect_tasks()
+    +sort_by_priority(tasks)
+    +filter_by_time(tasks)
     +generate_plan()
-    +sort_by_priority()
-    +filter_by_time()
 }
-
-Owner "1" --> "0..*" Pet : owns
-Pet "1" --> "0..*" Task : has
-Scheduler --> Pet : schedules
+Owner "1"-->"many" Pet:has
+Pet "1"-->"many" Task:has
+Pet "1"-->"1" Owner:belongs to
+Scheduler ..> Owner:uses
+Scheduler ..> Task:schedules

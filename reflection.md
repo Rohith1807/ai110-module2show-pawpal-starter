@@ -23,6 +23,12 @@ I chose 4 classes: **Owner, Pet, Task, and Scheduler**
 - Did your design change during implementation?
 - If yes, describe at least one change and why you made it.
 
+After reviewing the skeleton with AI feedback, I made three changes. 
+First, I added an owner back-reference on Pet so scheduling logic can access owner-level constraints without needing to pass the owner separately. 
+Second, I replaced name-based task removal with a unique id field on Task, since two tasks could easily share a name (e.g. two "Walk" entries for morning and evening). 
+Third, I changed Scheduler to operate on the whole Owner instead of a single Pet. 
+My original design didn't account for owners with multiple pets competing for the same block of time, which is actually the more realistic and interesting scheduling problem. I also updated filter_by_time to return both scheduled and skipped tasks explicitly, instead of silently dropping tasks that don't fit, so the app can later show the user what got cut and why.
+
 ---
 
 ## 2. Scheduling Logic and Tradeoffs
