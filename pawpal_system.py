@@ -174,6 +174,56 @@ class Scheduler:
 
         return scheduled, skipped
 
+    def sort_by_priority_then_time(
+        self, tasks: List[Tuple[Pet, Task]]
+    ) -> List[Tuple[Pet, Task]]:
+        """Sorts tasks by priority first, then chronologically within each
+        priority tier. Combines sort_by_priority and sort_by_time for a
+        single ordering that reflects both urgency and time of day."""
+        return sorted(
+            tasks,
+            key=lambda pt: (
+                PRIORITY_ORDER.get(pt[1].priority, 99),
+                pt[1].scheduled_time or "23:59",
+            ),
+        )
+
+    def find_next_available_slot(
+        self, tasks: List[Tuple[Pet, Task]], duration_minutes: int,
+        day_start: str = "07:00", day_end: str = "21:00",
+    ) -> Optional[str]:
+        """Finds the earliest HH:MM slot of at least duration_minutes that
+        doesn't overlap any already-scheduled task, within the given day
+        window. Returns None if no such slot exists. Uses a simple linear
+        scan over sorted scheduled intervals rather than an interval tree,
+        since a single day's task list is small enough not to need one."""
+
+        def to_minutes(hhmm: str) -> int:
+            h, m = map(int, hhmm.split(":"))
+            return h * 60 + m
+
+        def to_hhmm(total_minutes: int) -> str:
+            return f"{total_minutes // 60:02d}:{total_minutes % 60:02d}"
+
+        busy = sorted(
+            (to_minutes(t.scheduled_time), to_minutes(t.scheduled_time) + t.duration_minutes)
+            for _, t in tasks
+            if t.scheduled_time is not None
+        )
+
+        cursor = to_minutes(day_start)
+        end_of_day = to_minutes(day_end)
+
+        for start, end in busy:
+            if start - cursor >= duration_minutes:
+                return to_hhmm(cursor)
+            cursor = max(cursor, end)
+
+        if end_of_day - cursor >= duration_minutes:
+            return to_hhmm(cursor)
+
+        return None
+
     def detect_conflicts(self, tasks: List[Tuple[Pet, Task]]) -> List[str]:
         """Lightweight conflict check: flags tasks that share the same
         scheduled_time, since the owner can't physically do two things at

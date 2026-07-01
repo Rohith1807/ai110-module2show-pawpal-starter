@@ -64,8 +64,6 @@ Skipped (not enough time today):
 
 ## 🧪 Testing PawPal+
 
-## 🧪 Testing PawPal+
-
 Run the full test suite:
 
     python -m pytest
@@ -110,14 +108,21 @@ Sample test output:
 | Conflict handling  | `Scheduler.detect_conflicts()`      | Exact time-match detection only, does not catch overlapping durations |
 | Recurring tasks    | `Task.next_occurrence()`, `Pet.complete_task()` | Daily/weekly frequency, uses `timedelta` to compute next due date |
 
+## ✨ Features
+
+- **Multi-pet support** — one owner can manage multiple pets, each with their own task list
+- **Priority-based scheduling** — `Scheduler.generate_plan()` fills the owner's available time with the highest-priority tasks first
+- **Time-based sorting** — `Scheduler.sort_by_time()` orders tasks chronologically, with unscheduled tasks placed last
+- **Filtering** — `Scheduler.filter_tasks()` filters by pet or by completion status
+- **Conflict warnings** — `Scheduler.detect_conflicts()` flags tasks scheduled at the exact same time so the owner can catch double-booking before the day starts
+- **Daily and weekly recurrence** — `Task.next_occurrence()` automatically generates the next instance of a recurring task when the current one is marked complete
+
 ## 📸 Demo Walkthrough
 
-Describe your app in numbered steps so a reader can follow along without watching a video:
-
-1. <!-- Describe this step -->
-2. <!-- Describe this step -->
-3. <!-- Describe this step -->
-4. <!-- Describe this step -->
-5. <!-- Add more steps as needed -->
-
-**Screenshot or video** *(optional)*: <!-- Insert a screenshot or link to a demo video here -->
+1. The owner enters their name and how many minutes they have available today.
+2. The owner adds one or more pets by name and species.
+3. For each pet, the owner adds care tasks with a title, duration, priority, scheduled time, and frequency (one-time, daily, or weekly).
+4. The app displays all tasks sorted by time, with a filter to view a single pet's tasks or hide completed ones.
+5. If two tasks share the same scheduled time, a warning appears immediately, naming both tasks and the conflicting time.
+6. The owner clicks "Generate schedule." The Scheduler sorts remaining tasks by priority and fills the available time budget, showing which tasks made the cut and which were skipped for lack of time.
+7. The owner can mark any task complete. If it's a daily or weekly task, the next occurrence is created automatically and its due date is shown.

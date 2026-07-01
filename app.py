@@ -1,7 +1,6 @@
 import streamlit as st
 from pawpal_system import Owner, Pet, Task, Scheduler
 
-
 st.set_page_config(page_title="PawPal+", page_icon="🐾", layout="centered")
 
 st.title("🐾 PawPal+")
@@ -72,13 +71,17 @@ if owner.pets:
     selected_pet_name = st.selectbox("Pet", pet_names)
     selected_pet = next(p for p in owner.pets if p.name == selected_pet_name)
 
-    col1, col2, col3 = st.columns(3)
+    col1, col2, col3, col4 = st.columns(4)
     with col1:
         task_title = st.text_input("Task title", value="Morning walk")
     with col2:
         duration = st.number_input("Duration (minutes)", min_value=1, max_value=240, value=20)
     with col3:
         priority = st.selectbox("Priority", ["low", "medium", "high"], index=2)
+    with col4:
+        scheduled_time = st.text_input("Time (HH:MM)", value="08:00")
+
+    frequency = st.selectbox("Frequency", ["one-time", "daily", "weekly"])
 
     if st.button("Add task"):
         if task_title:
@@ -87,19 +90,72 @@ if owner.pets:
                 category="general",
                 duration_minutes=int(duration),
                 priority=priority,
+                scheduled_time=scheduled_time or None,
+                frequency=None if frequency == "one-time" else frequency,
+                recurring=frequency != "one-time",
             )
             selected_pet.add_task(new_task)
             st.success(f"Added '{task_title}' to {selected_pet.name}.")
 
-    # Show tasks per pet
-    for pet in owner.pets:
-        if pet.get_tasks():
-            st.write(f"**{pet.name}'s tasks:**")
-            rows = [
-                {"title": t.name, "duration_minutes": t.duration_minutes, "priority": t.priority}
-                for t in pet.get_tasks()
-            ]
-            st.table(rows)
+    # --- Sorted, filterable task view ---
+    st.markdown("### All tasks (sorted by time)")
+    scheduler = Scheduler(owner)
+    all_tasks = owner.get_all_tasks()
+
+    filter_pet = st.selectbox("Filter by pet", ["All pets"] + pet_names)
+    show_completed = st.checkbox("Show completed tasks", value=True)
+
+    filtered = scheduler.filter_tasks(
+        all_tasks,
+        pet_name=None if filter_pet == "All pets" else filter_pet,
+        completed=None if show_completed else False,
+    )
+    sorted_tasks = scheduler.sort_by_time(filtered)
+
+    if sorted_tasks:
+        rows = [
+            {
+                "time": t.scheduled_time or "unscheduled",
+                "pet": p.name,
+                "task": t.name,
+                "duration_min": t.duration_minutes,
+                "priority": t.priority,
+                "completed": "✅" if t.completed else "⬜",
+            }
+            for p, t in sorted_tasks
+        ]
+        st.table(rows)
+    else:
+        st.info("No tasks match this filter.")
+
+    # --- Conflict warnings, shown immediately, before plan generation ---
+    conflicts = scheduler.detect_conflicts(all_tasks)
+    if conflicts:
+        st.warning("⚠️ Scheduling conflicts detected:")
+        for warning in conflicts:
+            st.write(f"- {warning}")
+    else:
+        st.success("No time conflicts detected.")
+
+    # --- Mark tasks complete ---
+    st.markdown("### Mark a task complete")
+    incomplete_tasks = [(p, t) for p, t in all_tasks if not t.completed]
+    if incomplete_tasks:
+        labels = [f"{p.name}: {t.name}" for p, t in incomplete_tasks]
+        choice = st.selectbox("Task", labels)
+        chosen_pet, chosen_task = incomplete_tasks[labels.index(choice)]
+
+        if st.button("Mark complete"):
+            next_task = chosen_pet.complete_task(chosen_task.id)
+            if next_task:
+                st.success(
+                    f"Marked '{chosen_task.name}' complete. "
+                    f"Next occurrence scheduled for {next_task.due_date}."
+                )
+            else:
+                st.success(f"Marked '{chosen_task.name}' complete.")
+    else:
+        st.caption("No incomplete tasks to mark.")
 
 st.divider()
 
@@ -113,10 +169,18 @@ if st.button("Generate schedule"):
     if not plan:
         st.warning("No tasks fit in today's schedule. Add some tasks or increase available time.")
     else:
-        total_used = 0
-        for pet, task in plan:
-            total_used += task.duration_minutes
-            st.write(f"**[{task.priority.upper()}]** {pet.name}: {task.name} ({task.duration_minutes} min)")
+        st.success(f"Today's plan for {owner.name}:")
+        rows = [
+            {
+                "priority": t.priority,
+                "pet": p.name,
+                "task": t.name,
+                "duration_min": t.duration_minutes,
+            }
+            for p, t in plan
+        ]
+        st.table(rows)
+        total_used = sum(t.duration_minutes for _, t in plan)
         st.caption(f"Total time used: {total_used}/{owner.available_minutes} minutes")
 
     if skipped:
