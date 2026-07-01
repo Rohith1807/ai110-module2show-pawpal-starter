@@ -86,18 +86,8 @@ tests\test_pawpal.py ..........                                                 
 
 =========================================================== 10 passed in 0.06s ===========================================================
 ```
-
 Confidence Level - ★★★★
 
-# Run with coverage:
-pytest --cov
-```
-
-Sample test output:
-
-```
-# Paste your pytest output here
-```
 
 ## 📐 Smarter Scheduling
 
